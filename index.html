@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>围脖 - 你的小广场</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- 顶部导航 -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-logo">围</div>
+        <div class="brand-text">
+          <strong>围脖</strong>
+          <span>你的小广场</span>
+        </div>
+      </div>
+      <nav class="topbar-nav">
+        <a href="#" class="nav-link active">PLAZA</a>
+        <a href="#" class="nav-link" data-nav="hot">热门</a>
+      </nav>
+      <div class="search-box">
+        <svg class="search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/>
+        </svg>
+        <input id="searchInput" type="text" placeholder="搜索围脖或话题…" />
+      </div>
+      <button class="btn-write" id="btnWrite">写一条</button>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="layout-card">
+      <div class="columns">
+
+        <!-- 左栏：个人资料 + 导航 -->
+        <aside class="col col-left">
+          <section class="profile-card">
+            <div class="avatar avatar-lg">围</div>
+            <h2 class="profile-name">围脖</h2>
+            <p class="profile-bio">随便写写，开心就好 ☁️</p>
+            <div class="profile-stats">
+              <div class="stat"><b id="statPosts">0</b><span>围脖</span></div>
+              <div class="stat"><b id="statLikes">0</b><span>被望</span></div>
+              <div class="stat"><b id="statTags">0</b><span>话题</span></div>
+            </div>
+          </section>
+
+          <nav class="side-nav">
+            <a href="#" class="side-link active" data-nav="all">🏠 广场</a>
+            <a href="#" class="side-link" data-nav="hot">🔥 热门</a>
+            <a href="#" class="side-link" data-nav="compose">✏️ 写一条</a>
+          </nav>
+
+          <p class="side-tip">所有内容只保存在你的浏览器里，不必担心被望见。</p>
+        </aside>
+
+        <!-- 中栏：发布 + 时间流 -->
+        <section class="col col-main">
+          <!-- 发布区 -->
+          <section class="composer" id="composer">
+            <div class="composer-head">
+              <div class="avatar avatar-sm">围</div>
+              <textarea id="composerInput" rows="3" maxlength="200"
+                placeholder="此刻，想写下什么？"></textarea>
+            </div>
+            <div class="composer-toolbar">
+              <div class="topic-chips">
+                <button class="chip" data-topic="今日记录">#今日记录</button>
+                <button class="chip" data-topic="读书笔记">#读书笔记</button>
+                <button class="chip" data-topic="夜跑路上">#夜跑路上</button>
+                <button class="chip" data-topic="深夜食堂">#深夜食堂</button>
+              </div>
+              <div class="composer-actions">
+                <div class="char-meter">
+                  <div class="char-bar" id="charBar"></div>
+                  <span id="charCount">140</span>
+                </div>
+                <button class="btn-publish" id="btnPublish" disabled>发布</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Tab 切换 -->
+          <div class="feed-tabs">
+            <button class="tab active" data-tab="all">全部</button>
+            <button class="tab" data-tab="hot">热门</button>
+            <span class="filter-pill" id="filterPill" hidden>
+              <span id="filterLabel"></span>
+              <button id="filterClear" title="清除筛选">✕</button>
+            </span>
+          </div>
+
+          <!-- 时间流 -->
+          <div class="feed" id="feed"></div>
+        </section>
+
+        <!-- 右栏：热议 + 玩法提示 -->
+        <aside class="col col-right">
+          <section class="trend-card">
+            <h3 class="card-title">此刻热议</h3>
+            <ol class="trend-list" id="trendList"></ol>
+          </section>
+          <section class="tip-card">
+            <h3 class="card-title">玩法提示</h3>
+            <ul>
+              <li>点击话题标签，只看这个话题的围脖。</li>
+              <li>❤ 点赞自己喜欢的人，数据留在本地。</li>
+              <li>「热门」按点赞数排位。</li>
+              <li>刷新页面，一切都在。</li>
+            </ul>
+          </section>
+        </aside>
+
+      </div>
+    </div>
+  </main>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
