@@ -1,13 +1,19 @@
 /* ===== 围脖 - 逻辑 ===== */
 const STORAGE_KEY = "weibo_posts_v1";
 const LIMIT = 140;
+const AUTHOR = "一路小跑，天天洗澡";
 
 /* ---------- 存取 ---------- */
+function normalizePost(p) {
+  if (!Array.isArray(p.comments)) p.comments = [];
+  p.comments.forEach(c => { if (!Array.isArray(c.replies)) c.replies = []; });
+  return p;
+}
 function loadPosts() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     const arr = raw ? JSON.parse(raw) : null;
-    if (Array.isArray(arr) && arr.length) return arr;
+    if (Array.isArray(arr) && arr.length) return arr.map(normalizePost);
   } catch (e) { /* 数据损坏则重置 */ }
   const seed = seedPosts();
   savePosts(seed);
@@ -28,11 +34,25 @@ function seedPosts() {
     liked: false,
     createdAt: now - minAgo * 60000,
   });
-  return [
+  const list = [
     mk(5, "晚饭给自己煮了一碗热汤面，加了两颗蛋。#深夜食堂 #今日记录"),
     mk(45, "夜跑五公里完成，风很凉，心情很好。#夜跑路上"),
     mk(120, "读完了那本拖了半年的书，最后一章居然有点舍不得。#读书笔记"),
   ];
+  const c1 = mkc(3, "旧友阿茶", "热汤面配两颗蛋，是顶配了。");
+  c1.replies.push(mkr(2, AUTHOR, "下次再撒一把葱花，就更圆满了。"));
+  list[0].comments.push(c1);
+  const c3 = mkc(90, "楼下老周", "哪本书？说来听听。");
+  list[2].comments.push(c3);
+  return list;
+}
+
+/* 评论 / 回复 */
+function mkc(minAgo, author, content) {
+  return { id: "c" + Date.now() + Math.random().toString(36).slice(2, 6), author, content, createdAt: Date.now() - minAgo * 60000, replies: [] };
+}
+function mkr(minAgo, author, content) {
+  return { id: "r" + Date.now() + Math.random().toString(36).slice(2, 6), author, content, createdAt: Date.now() - minAgo * 60000 };
 }
 
 /* ---------- 工具 ---------- */
@@ -63,6 +83,8 @@ let posts = loadPosts();
 let tab = "all";          // all | hot
 let activeTopic = null;   // 话题筛选
 let keyword = "";         // 搜索关键词
+let openComments = null;  // 展开评论区的围脖 id
+let replyTarget = null;   // { postId, commentId, author } 回复目标
 
 /* ---------- DOM ---------- */
 const $ = (id) => document.getElementById(id);
@@ -87,6 +109,68 @@ function visiblePosts() {
   return list;
 }
 
+/* 评论 / 回复总数 */
+function commentCount(p) {
+  return p.comments.reduce((s, c) => s + 1 + c.replies.length, 0);
+}
+
+/* 评论头像字：自己为「跑」，他人为「友」 */
+function avOf(author) {
+  return author === AUTHOR ? "跑" : "友";
+}
+
+/* 渲染一条评论（含回复） */
+function renderComment(c) {
+  const replies = c.replies.map(r => `
+    <div class="reply">
+      <div class="avatar avatar-xs">${avOf(r.author)}</div>
+      <div class="comment-main">
+        <div class="comment-meta">
+          <span class="comment-author">${esc(r.author)}</span>
+          <span class="post-time">${relTime(r.createdAt)}</span>
+        </div>
+        <p class="comment-text">${renderText(r.content)}</p>
+        <div class="comment-ops"><button data-reply="${c.id}" data-rto="${esc(r.author)}">回复</button></div>
+      </div>
+    </div>`).join("");
+  return `
+    <div class="comment" data-cid="${c.id}">
+      <div class="avatar avatar-xs">${avOf(c.author)}</div>
+      <div class="comment-main">
+        <div class="comment-meta">
+          <span class="comment-author">${esc(c.author)}</span>
+          <span class="post-time">${relTime(c.createdAt)}</span>
+        </div>
+        <p class="comment-text">${renderText(c.content)}</p>
+        <div class="comment-ops"><button data-reply="${c.id}" data-rto="${esc(c.author)}">回复</button></div>
+        ${replies}
+      </div>
+    </div>`;
+}
+
+/* 渲染评论区 */
+function renderCommentPanel(p) {
+  if (openComments !== p.id) return "";
+  const listHtml = p.comments.length
+    ? p.comments.map(renderComment).join("")
+    : `<p class="comment-empty">还没有评论，写下一句吧。</p>`;
+  const tip = replyTarget && replyTarget.postId === p.id
+    ? `<div class="replying-tip">回复 @${esc(replyTarget.author)}：<button data-cancel-reply>取消</button></div>`
+    : "";
+  const placeholder = replyTarget && replyTarget.postId === p.id
+    ? `回复 @${replyTarget.author}：`
+    : "说点什么…";
+  return `
+    <div class="comment-panel">
+      ${tip}
+      <div class="comment-list">${listHtml}</div>
+      <div class="comment-input">
+        <input class="comment-box" data-post="${p.id}" maxlength="60" placeholder="${placeholder}" />
+        <button class="comment-submit" data-comment-submit="${p.id}">发送</button>
+      </div>
+    </div>`;
+}
+
 function render() {
   const list = visiblePosts();
   if (!list.length) {
@@ -96,10 +180,10 @@ function render() {
   } else {
     feed.innerHTML = list.map(p => `
       <article class="post-card" data-id="${p.id}">
-        <div class="avatar avatar-sm">围</div>
+        <div class="avatar avatar-sm">跑</div>
         <div class="post-body">
           <div class="post-meta">
-            <span class="post-name">围脖</span>
+            <span class="post-name">${AUTHOR}</span>
             <span class="post-time">${relTime(p.createdAt)}</span>
           </div>
           <p class="post-text">${renderText(p.content)}</p>
@@ -107,7 +191,11 @@ function render() {
             <button class="like-btn ${p.liked ? "liked" : ""}" data-like="${p.id}">
               <span class="heart">❤</span><span>${p.likes}</span>
             </button>
+            <button class="comment-btn ${openComments === p.id ? "open" : ""}" data-comment-toggle="${p.id}">
+              💬 ${commentCount(p)}
+            </button>
           </div>
+          ${renderCommentPanel(p)}
         </div>
       </article>
     `).join("");
@@ -138,6 +226,12 @@ function render() {
           <span class="trend-count">${c} 条</span>
         </button></li>`).join("")
     : `<li class="trend-empty">暂无话题，发一条带 #话题# 的围脖吧</li>`;
+
+  // 恢复评论输入焦点
+  if (openComments) {
+    const box = feed.querySelector(`.comment-box[data-post="${openComments}"]`);
+    if (box) box.focus();
+  }
 }
 
 /* ---------- 发布 ---------- */
@@ -162,6 +256,7 @@ function publish() {
     tags: extractTags(content),
     likes: 0,
     liked: false,
+    comments: [],
     createdAt: Date.now(),
   });
   savePosts(posts);
@@ -194,7 +289,7 @@ document.querySelectorAll(".chip").forEach(chip => {
   });
 });
 
-// 事件委托：点赞 / 话题点击 / 热议榜
+// 事件委托：点赞 / 评论展开 / 回复 / 发送评论 / 话题点击 / 热议榜
 document.addEventListener("click", (e) => {
   const likeBtn = e.target.closest("[data-like]");
   if (likeBtn) {
@@ -205,6 +300,35 @@ document.addEventListener("click", (e) => {
       savePosts(posts);
       render();
     }
+    return;
+  }
+  const submitBtn = e.target.closest("[data-comment-submit]");
+  if (submitBtn) {
+    submitComment(submitBtn.dataset.commentSubmit);
+    return;
+  }
+  const cancelBtn = e.target.closest("[data-cancel-reply]");
+  if (cancelBtn) {
+    replyTarget = null;
+    render();
+    return;
+  }
+  const replyBtn = e.target.closest("[data-reply]");
+  if (replyBtn) {
+    const card = replyBtn.closest(".post-card");
+    replyTarget = {
+      postId: card.dataset.id,
+      commentId: replyBtn.dataset.reply,
+      author: replyBtn.dataset.rto,
+    };
+    render();
+    return;
+  }
+  const toggleBtn = e.target.closest("[data-comment-toggle]");
+  if (toggleBtn) {
+    openComments = openComments === toggleBtn.dataset.commentToggle ? null : toggleBtn.dataset.commentToggle;
+    replyTarget = null;
+    render();
     return;
   }
   const topicEl = e.target.closest("[data-topic]");
@@ -219,6 +343,36 @@ document.addEventListener("click", (e) => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 });
+
+// 评论输入框回车发送
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  const box = e.target.closest(".comment-box");
+  if (box && !e.shiftKey) {
+    e.preventDefault();
+    submitComment(box.dataset.post);
+  }
+});
+
+/* 提交评论 / 回复 */
+function submitComment(postId) {
+  const p = posts.find(x => x.id === postId);
+  if (!p) return;
+  const box = feed.querySelector(`.comment-box[data-post="${postId}"]`);
+  if (!box) return;
+  const content = box.value.trim();
+  if (!content) return;
+  if (replyTarget && replyTarget.postId === postId) {
+    const c = p.comments.find(c => c.id === replyTarget.commentId);
+    if (c) c.replies.push(mkr(0, AUTHOR, content));
+    replyTarget = null;
+  } else {
+    p.comments.push(mkc(0, AUTHOR, content));
+  }
+  savePosts(posts);
+  openComments = postId;
+  render();
+}
 
 // Tab 切换
 function setTabUI() {
