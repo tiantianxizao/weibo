@@ -114,9 +114,9 @@ function commentCount(p) {
   return p.comments.reduce((s, c) => s + 1 + c.replies.length, 0);
 }
 
-/* 评论头像字：自己为「跑」，他人为「友」 */
+/* 评论头像字：自己为「澡」，他人为「友」 */
 function avOf(author) {
-  return author === AUTHOR ? "跑" : "友";
+  return author === AUTHOR ? "澡" : "友";
 }
 
 /* 渲染一条评论（含回复） */
@@ -180,7 +180,7 @@ function render() {
   } else {
     feed.innerHTML = list.map(p => `
       <article class="post-card" data-id="${p.id}">
-        <div class="avatar avatar-sm">跑</div>
+        <div class="avatar avatar-sm">澡</div>
         <div class="post-body">
           <div class="post-meta">
             <span class="post-name">${AUTHOR}</span>
